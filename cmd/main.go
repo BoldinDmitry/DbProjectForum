@@ -27,7 +27,7 @@ func main() {
 
 	r.Use(applicationJSON)
 
-	connStr := fmt.Sprintf("user=%s password=%s dbname=postgres sslmode=disable port=%s",
+	connStr := fmt.Sprintf("user=%s password=%s dbname=docker sslmode=disable port=%s",
 		configs.PostgresPreferences.User,
 		configs.PostgresPreferences.Password,
 		configs.PostgresPreferences.Port)
@@ -47,7 +47,7 @@ func main() {
 	log.Info().Msgf("starting server at :5000")
 	srv := &http.Server{
 		Handler:      r,
-		Addr:         "127.0.0.1:5000",
+		Addr:         ":5000",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
