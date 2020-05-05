@@ -72,6 +72,7 @@ BEGIN
 
         NEW.path := NEW.path || parent_path || new.id;
     end if;
+    UPDATE forum SET Posts=Posts+1 WHERE lower(forum.slug) = lower(new.forum);
     RETURN new;
 end
 $update_path$ LANGUAGE plpgsql;

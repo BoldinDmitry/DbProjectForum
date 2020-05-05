@@ -46,6 +46,7 @@ func (p *postgresForumRepository) GetBySlug(slug string) (models.Forum, error) {
 
 	var forumObj models.Forum
 	err := p.conn.Get(&forumObj, query, slug)
+
 	return forumObj, err
 }
 
@@ -228,12 +229,6 @@ func (p *postgresForumRepository) AddPosts(posts []models.Post, threadID int) ([
 	query += strings.Join(valuesNames[:], ",")
 	query += " RETURNING *"
 	err = p.conn.Select(&data, query, values...)
-	if err == nil {
-		err = p.updatePostsCount(slug, len(posts))
-		if err != nil {
-			return data, err
-		}
-	}
 	return data, err
 }
 
