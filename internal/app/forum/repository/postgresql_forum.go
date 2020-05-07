@@ -199,26 +199,11 @@ func (p *postgresForumRepository) AddPosts(posts []models.Post, threadID int) ([
 		return data, err
 	}
 
-	paths := map[int64]pq.Int64Array{}
-
 	timeCreated := time.Now()
 	var valuesNames []string
 	var values []interface{}
 	i := 1
 	for _, element := range posts {
-		path := pq.Int64Array{}
-		var ok bool
-		if element.Parent.Valid {
-			if path, ok = paths[element.Parent.Int64]; !ok {
-				paths[element.Parent.Int64], err = p.getPostPathByID(element.Parent.Int64)
-				//no parent
-				if err != nil {
-					return data, err
-				}
-			}
-			path = append(path, element.Id)
-		}
-
 		valuesNames = append(valuesNames, fmt.Sprintf(
 			"($%d, $%d, $%d, nullif($%d, 0), $%d, $%d)",
 			i, i+1, i+2, i+3, i+4, i+5))
