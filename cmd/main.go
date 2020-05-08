@@ -6,7 +6,6 @@ import (
 	_forumRepo "DbProjectForum/internal/app/forum/repository"
 	_userHandlers "DbProjectForum/internal/app/user/delivery"
 	_userRepo "DbProjectForum/internal/app/user/repository"
-	"DbProjectForum/internal/pkg/responses"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
@@ -23,21 +22,21 @@ func applicationJSON(next http.Handler) http.Handler {
 	})
 }
 
-func loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rec := responses.StatusRecorder{ResponseWriter: w, Status: 200}
-
-		next.ServeHTTP(&rec, r)
-		msg := fmt.Sprintf("URL: %s, METHOD: %s, Answer code: %d", r.RequestURI, r.Method, rec.Status)
-		log.Info().Msgf(msg)
-	})
-}
+//func loggingMiddleware(next http.Handler) http.Handler {
+//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		rec := responses.StatusRecorder{ResponseWriter: w, Status: 200}
+//
+//		next.ServeHTTP(&rec, r)
+//		msg := fmt.Sprintf("URL: %s, METHOD: %s, Answer code: %d", r.RequestURI, r.Method, rec.Status)
+//		log.Info().Msgf(msg)
+//	})
+//}
 
 func main() {
 	r := mux.NewRouter()
 
 	r.Use(applicationJSON)
-	r.Use(loggingMiddleware)
+	//r.Use(loggingMiddleware)
 
 	connStr := fmt.Sprintf("user=%s password=%s dbname=docker sslmode=disable port=%s",
 		configs.PostgresPreferences.User,

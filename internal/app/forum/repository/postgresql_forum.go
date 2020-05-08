@@ -226,12 +226,7 @@ func (p *postgresForumRepository) AddVote(vote models.Vote) error {
 				idThread)
 				VALUES ($1, $2, NULLIF($3, 0)) RETURNING *`
 
-	userObj, err := p.userRepo.GetByNick(vote.Nickname)
-	if err != nil {
-		return err
-	}
-
-	_, err = p.conn.Exec(query, userObj.Nickname, vote.Voice, vote.IdThread)
+	_, err := p.conn.Exec(query, vote.Nickname, vote.Voice, vote.IdThread)
 	if err == nil {
 		id := int(vote.IdThread)
 		err = p.updateVotes(id, vote.Voice)
