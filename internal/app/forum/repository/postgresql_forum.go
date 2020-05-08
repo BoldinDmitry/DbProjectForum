@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 	"strings"
 	"time"
 )
@@ -139,7 +138,7 @@ func (p *postgresForumRepository) GetThreadIDBySlug(slug string) (int, error) {
 
 func (p *postgresForumRepository) GetThreadSlugByID(id int) (string, error) {
 	query := `SELECT slug FROM thread WHERE id=$1`
-
+	//TODO INDEX
 	var slug string
 	err := p.conn.Get(&slug, query, id)
 	return slug, err
@@ -187,14 +186,6 @@ func (p *postgresForumRepository) AddPosts(posts []models.Post, threadID int) ([
 	query += " RETURNING *"
 	err = p.conn.Select(&data, query, values...)
 	return data, err
-}
-
-func (p *postgresForumRepository) getPostPathByID(ID int64) (pq.Int64Array, error) {
-	query := `SELECT path FROM post WHERE id=$1`
-
-	var path pq.Int64Array
-	err := p.conn.Get(&path, query, ID)
-	return path, err
 }
 
 func (p *postgresForumRepository) AddVote(vote models.Vote) error {

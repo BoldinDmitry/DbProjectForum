@@ -177,10 +177,11 @@ CREATE INDEX users_forum_forum_user_index ON users_forum (lower(users_forum.Slug
 CREATE INDEX users_forum_forum_index ON users_forum (lower(users_forum.Slug));
 CREATE INDEX users_forum_user_index ON users_forum (nickname);
 
-CREATE INDEX thread_slug_index ON thread (lower(slug));
+CREATE INDEX thread_slug_lower_index ON thread (lower(slug));
+CREATE INDEX thread_slug_index ON thread (slug);
 CREATE INDEX thread_slug_id_index ON thread (lower(slug), id);
-CREATE INDEX thread_forum_index ON thread (lower(forum));
-CREATE INDEX thread_forum_created_index ON thread (lower(forum), created);
+CREATE INDEX thread_forum_lower_index ON thread (lower(forum));
+CREATE INDEX thread_forum_index ON thread (forum);
 CREATE INDEX thread_id_forum_index ON thread (id, forum);
 CREATE INDEX thread_created_index ON thread (created);
 
