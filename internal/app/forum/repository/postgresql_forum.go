@@ -56,18 +56,12 @@ func (p *postgresForumRepository) updateThreadsCount(slug string, threadsCount i
 	return err
 }
 
-func (p *postgresForumRepository) updateVotes(id int, newVote int32) error {
-	query := `UPDATE thread SET votes=(votes+$1) WHERE id=$2`
-
-	_, err := p.conn.Exec(query, newVote, id)
-	return err
-}
-
-func (p *postgresForumRepository) updatePostsCount(slug string, postsCount int) error {
-	query := `UPDATE forum SET Posts=(Posts+$1) WHERE LOWER(slug)=LOWER($2)`
-	_, err := p.conn.Exec(query, postsCount, slug)
-	return err
-}
+//func (p *postgresForumRepository) updateVotes(id int, newVote int32) error {
+//	query := `UPDATE thread SET votes=(votes+$1) WHERE id=$2`
+//
+//	_, err := p.conn.Exec(query, newVote, id)
+//	return err
+//}
 
 func (p *postgresForumRepository) AddThread(thread models.Thread) (models.Thread, error) {
 	query := `INSERT INTO thread(
@@ -227,20 +221,12 @@ func (p *postgresForumRepository) AddVote(vote models.Vote) error {
 				VALUES ($1, $2, NULLIF($3, 0)) RETURNING *`
 
 	_, err := p.conn.Exec(query, vote.Nickname, vote.Voice, vote.IdThread)
-	if err == nil {
-		id := int(vote.IdThread)
-		err = p.updateVotes(id, vote.Voice)
-	}
 	return err
 }
 
 func (p *postgresForumRepository) UpdateVote(vote models.Vote) error {
 	query := `UPDATE vote SET voice=$1 WHERE LOWER(nickname) = LOWER($2) AND idThread = $3 AND voice<>$1`
 	_, err := p.conn.Exec(query, vote.Voice, vote.Nickname, vote.IdThread)
-	if err == nil {
-		id := int(vote.IdThread)
-		err = p.updateVotes(id, vote.Voice*2)
-	}
 	return err
 }
 
