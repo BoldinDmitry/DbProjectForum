@@ -122,3 +122,5 @@ CREATE INDEX post_path_index ON post ((post.path));
 CREATE INDEX forum_slug_lower_index ON forum (lower(forum.Slug));
 
 CREATE INDEX users_nickname_index ON users (lower(users.Nickname));
+
+CREATE INDEX users_forum_forum_index ON users_forum (lower(users_forum.Slug)) INCLUDE (nickname);
