@@ -116,13 +116,14 @@ CREATE TRIGGER path_update_trigger
     FOR EACH ROW
 EXECUTE PROCEDURE update_path();
 
-CREATE INDEX post_first_parent_index ON post ((post.path[1])) INCLUDE (thread);
+CREATE INDEX post_first_parent_thread_index ON post ((post.path[1]), thread);
+CREATE INDEX post_first_parent_index ON post ((post.path[1]));
 CREATE INDEX post_path_index ON post ((post.path));
 
 CREATE INDEX forum_slug_lower_index ON forum (lower(forum.Slug));
 
 CREATE INDEX users_nickname_index ON users (lower(users.Nickname));
 
-CREATE INDEX users_forum_forum_index ON users_forum (lower(users_forum.Slug)) INCLUDE (nickname);
+CREATE INDEX users_forum_forum_index ON users_forum (lower(users_forum.Slug), nickname);
 
 CREATE INDEX thread_slug_index ON thread (lower(slug));
