@@ -50,12 +50,6 @@ func (p *postgresForumRepository) GetBySlug(slug string) (models.Forum, error) {
 	return forumObj, err
 }
 
-func (p *postgresForumRepository) updateThreadsCount(slug string, threadsCount int) error {
-	query := `UPDATE forum SET Threads=(Threads+$1) WHERE LOWER(slug)=LOWER($2)`
-	_, err := p.conn.Exec(query, threadsCount, slug)
-	return err
-}
-
 func (p *postgresForumRepository) AddThread(thread models.Thread) (models.Thread, error) {
 	query := `INSERT INTO thread(
     slug,
@@ -78,9 +72,6 @@ func (p *postgresForumRepository) AddThread(thread models.Thread) (models.Thread
 	} else {
 		err = p.conn.Get(&threadObj, query, thread.Slug, thread.Author,
 			time.Time{}, thread.Message, thread.Title, forumObj.Slug)
-	}
-	if err == nil {
-		err = p.updateThreadsCount(forumObj.Slug, 1)
 	}
 	return threadObj, err
 }
