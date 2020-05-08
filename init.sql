@@ -144,6 +144,7 @@ CREATE TRIGGER edit_vote
 EXECUTE PROCEDURE update_votes();
 
 CREATE INDEX post_first_parent_thread_index ON post ((post.path[1]), thread);
+CREATE INDEX post_first_parent_id_index ON post ((post.path[1]), id);
 CREATE INDEX post_first_parent_index ON post ((post.path[1]));
 CREATE INDEX post_thread_index ON post (thread);
 CREATE INDEX post_path_index ON post ((post.path));
