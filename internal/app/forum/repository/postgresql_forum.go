@@ -79,12 +79,6 @@ func (p *postgresForumRepository) AddThread(thread models.Thread) (models.Thread
 	forum)
 	VALUES (NULLIF($1, ''), $2, $3, $4, $5, $6) RETURNING *`
 
-	userObj, err := p.userRepo.GetByNick(thread.Author)
-	if err != nil {
-		message := fmt.Sprintf("Can't find thread author by nickname: %s", thread.Author)
-		return models.Thread{}, errors.New(message)
-	}
-
 	forumObj, err := p.GetBySlug(thread.Forum)
 	if err != nil {
 		return models.Thread{}, err
@@ -92,10 +86,10 @@ func (p *postgresForumRepository) AddThread(thread models.Thread) (models.Thread
 
 	var threadObj models.Thread
 	if thread.Created != "" {
-		err = p.conn.Get(&threadObj, query, thread.Slug, userObj.Nickname,
+		err = p.conn.Get(&threadObj, query, thread.Slug, thread.Author,
 			thread.Created, thread.Message, thread.Title, forumObj.Slug)
 	} else {
-		err = p.conn.Get(&threadObj, query, thread.Slug, userObj.Nickname,
+		err = p.conn.Get(&threadObj, query, thread.Slug, thread.Author,
 			time.Time{}, thread.Message, thread.Title, forumObj.Slug)
 	}
 	if err == nil {
