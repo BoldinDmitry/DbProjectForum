@@ -155,4 +155,8 @@ CREATE INDEX users_nickname_index ON users (lower(users.Nickname));
 CREATE INDEX users_forum_forum_index ON users_forum (lower(users_forum.Slug), nickname);
 
 CREATE INDEX thread_slug_index ON thread (lower(slug));
+CREATE INDEX thread_slug_id_index ON thread (lower(slug), id);
 CREATE INDEX thread_forum_index ON thread (lower(forum));
+CREATE INDEX thread_forum_index ON thread (lower(forum), created);
+CREATE INDEX thread_created_index ON thread (created);
+

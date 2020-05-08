@@ -56,13 +56,6 @@ func (p *postgresForumRepository) updateThreadsCount(slug string, threadsCount i
 	return err
 }
 
-//func (p *postgresForumRepository) updateVotes(id int, newVote int32) error {
-//	query := `UPDATE thread SET votes=(votes+$1) WHERE id=$2`
-//
-//	_, err := p.conn.Exec(query, newVote, id)
-//	return err
-//}
-
 func (p *postgresForumRepository) AddThread(thread models.Thread) (models.Thread, error) {
 	query := `INSERT INTO thread(
     slug,
