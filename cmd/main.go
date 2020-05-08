@@ -37,7 +37,7 @@ func main() {
 	r := mux.NewRouter()
 
 	r.Use(applicationJSON)
-	//r.Use(loggingMiddleware)
+	r.Use(loggingMiddleware)
 
 	connStr := fmt.Sprintf("user=%s password=%s dbname=docker sslmode=disable port=%s",
 		configs.PostgresPreferences.User,

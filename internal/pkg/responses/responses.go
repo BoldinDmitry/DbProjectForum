@@ -3,13 +3,13 @@ package responses
 import (
 	"encoding/json"
 	"errors"
-	"github.com/rs/zerolog/log"
+	"fmt"
 	"net/http"
 )
 
 func SendServerError(errorMessage string, w http.ResponseWriter) {
 	w.WriteHeader(http.StatusInternalServerError)
-	log.Err(errors.New(errorMessage))
+	fmt.Printf("{level: error, message: %s}", errors.New(errorMessage))
 }
 
 func SendResponse(code int, data interface{}, w http.ResponseWriter) {

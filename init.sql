@@ -103,3 +103,5 @@ CREATE TRIGGER post_insert_user_forum AFTER INSERT ON post FOR EACH ROW EXECUTE 
 CREATE TRIGGER path_update_trigger BEFORE INSERT ON post FOR EACH ROW EXECUTE PROCEDURE update_path();
 
 CREATE INDEX first_parent_index ON post ((post.path[1]));
+
+
