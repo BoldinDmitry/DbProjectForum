@@ -160,3 +160,4 @@ CREATE INDEX thread_forum_index ON thread (lower(forum));
 CREATE INDEX thread_forum_index ON thread (lower(forum), created);
 CREATE INDEX thread_created_index ON thread (created);
 
+CREATE INDEX vote_nickname ON vote (lower(nickname), idThread, voice)
