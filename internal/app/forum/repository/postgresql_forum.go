@@ -101,7 +101,7 @@ func (p *postgresForumRepository) GetThreads(slug string, limit int, since strin
 }
 
 func (p *postgresForumRepository) CheckThreadExists(slug string) (bool, error) {
-	query := `select exists(select 1 from thread where forum=$1)`
+	query := `select exists(select 1 from thread where LOWER(forum)=LOWER($1))`
 
 	var exists bool
 
@@ -138,7 +138,7 @@ func (p *postgresForumRepository) GetThreadIDBySlug(slug string) (int, error) {
 
 func (p *postgresForumRepository) GetThreadSlugByID(id int) (string, error) {
 	query := `SELECT slug FROM thread WHERE id=$1`
-	//TODO INDEX
+
 	var slug string
 	err := p.conn.Get(&slug, query, id)
 	return slug, err
@@ -200,7 +200,7 @@ func (p *postgresForumRepository) AddVote(vote models.Vote) error {
 }
 
 func (p *postgresForumRepository) UpdateVote(vote models.Vote) error {
-	query := `UPDATE vote SET voice=$1 WHERE LOWER(nickname) = LOWER($2) AND idThread = $3 AND voice<>$1`
+	query := `UPDATE vote SET voice=$1 WHERE LOWER(nickname) = LOWER($2) AND idThread = $3`
 	_, err := p.conn.Exec(query, vote.Voice, vote.Nickname, vote.IdThread)
 	return err
 }
@@ -223,6 +223,7 @@ func (p *postgresForumRepository) getPostsFlat(threadID, limit, since int,
 	}
 	query += `LIMIT NULLIF($2, 0)`
 	var posts []models.Post
+
 	err := p.conn.Select(&posts, query, threadID, limit)
 	return posts, err
 }
