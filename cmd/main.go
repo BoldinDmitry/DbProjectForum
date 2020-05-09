@@ -37,9 +37,10 @@ func main() {
 	//r.Use(applicationJSON)
 	//r.Use(loggingMiddleware)
 
-	connStr := fmt.Sprintf("user=%s password=%s dbname=docker sslmode=disable port=%s",
+	connStr := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable port=%s",
 		configs.PostgresPreferences.User,
 		configs.PostgresPreferences.Password,
+		configs.PostgresPreferences.DBName,
 		configs.PostgresPreferences.Port)
 
 	conn, err := sqlx.Open("postgres", connStr)

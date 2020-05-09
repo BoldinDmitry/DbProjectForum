@@ -27,8 +27,7 @@ func NewForumHandler(r *router.Router, ur forum.Repository) {
 
 	r.GET("/api/forum/{slug}/threads", handler.GetThreads)
 
-	r.GET("/api/thread/{id:[0-9]+}/details", handler.GetThreadDetailsID)
-	r.GET("/api/thread/{slug}/details", handler.GetThreadDetailsSlug)
+	r.GET("/api/thread/{slug_or_id}/details", handler.GetThreadDetailsSlug)
 
 	r.POST("/api/thread/{slug_or_id}/details", handler.UpdateThreadBySlugOrID)
 
@@ -410,44 +409,24 @@ func (f *forumHandler) AddVoteID(ctx *fasthttp.RequestCtx) {
 }
 
 func (f *forumHandler) GetThreadDetailsSlug(ctx *fasthttp.RequestCtx) {
-	threadSlug, found := ctx.UserValue("slug").(string)
-	if !found {
-		responses.SendResponse(400, "bad request", ctx)
-		return
-	}
-	id, err := f.forumRepo.GetThreadIDBySlug(threadSlug)
-	if err != nil {
-		errHTTP := responses.HttpError{
-			Message: fmt.Sprintf(err.Error()),
-		}
-		responses.SendResponse(404, errHTTP, ctx)
-		return
-	}
-	forumObj, err := f.forumRepo.GetThreadByID(id)
-	if err != nil {
-		errHTTP := responses.HttpError{
-			Message: fmt.Sprintf(err.Error()),
-		}
-		responses.SendResponse(404, errHTTP, ctx)
-		return
-	}
-
-	responses.SendResponseOK(forumObj, ctx)
-	return
-}
-
-func (f *forumHandler) GetThreadDetailsID(ctx *fasthttp.RequestCtx) {
-	ValueStr, found := ctx.UserValue("id").(string)
+	threadSlug, found := ctx.UserValue("slug_or_id").(string)
 	if !found {
 		responses.SendResponse(400, "bad request", ctx)
 		return
 	}
 
-	id, err := strconv.Atoi(ValueStr)
+	id, err := strconv.Atoi(threadSlug)
 	if err != nil {
-		responses.SendServerError(err.Error(), ctx)
-		return
+		id, err = f.forumRepo.GetThreadIDBySlug(threadSlug)
+		if err != nil {
+			errHTTP := responses.HttpError{
+				Message: fmt.Sprintf(err.Error()),
+			}
+			responses.SendResponse(404, errHTTP, ctx)
+			return
+		}
 	}
+
 	forumObj, err := f.forumRepo.GetThreadByID(id)
 	if err != nil {
 		errHTTP := responses.HttpError{
