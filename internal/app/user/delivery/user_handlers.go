@@ -8,10 +8,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
+	"github.com/fasthttp/router"
 	"github.com/lib/pq"
-	"io/ioutil"
-	"net/http"
+	"github.com/valyala/fasthttp"
 	"strconv"
 )
 
@@ -20,38 +19,31 @@ type userHandler struct {
 	forumRepo forum.Repository
 }
 
-func NewUserHandler(r *mux.Router, ur user.Repository, fr forum.Repository) {
+func NewUserHandler(r *router.Router, ur user.Repository, fr forum.Repository) {
 	handler := userHandler{
 		userRepo:  ur,
 		forumRepo: fr,
 	}
 
-	r.HandleFunc("/api/user/{nickname}/create", handler.Add).Methods("POST")
-	r.HandleFunc("/api/user/{nickname}/profile", handler.Get).Methods("GET")
-	r.HandleFunc("/api/user/{nickname}/profile", handler.Update).Methods("POST")
+	r.POST("/api/user/{nickname}/create", handler.Add)
+	r.GET("/api/user/{nickname}/profile", handler.Get)
+	r.POST("/api/user/{nickname}/profile", handler.Update)
 
-	r.HandleFunc("/api/forum/{slug}/users", handler.GetByForum).Methods("GET")
+	r.GET("/api/forum/{slug}/users", handler.GetByForum)
 }
 
-func (ur *userHandler) Add(w http.ResponseWriter, r *http.Request) {
-	nickname, found := mux.Vars(r)["nickname"]
-	if !found {
-		responses.SendResponse(400, "bad request", w)
+func (ur *userHandler) Add(ctx *fasthttp.RequestCtx) {
+	nickname, ok := ctx.UserValue("nickname").(string)
+	if !ok {
+		responses.SendResponse(400, "bad request", ctx)
 		return
 	}
 
 	newUser := models.User{Nickname: nickname}
 
-	data, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
+	err := json.Unmarshal(ctx.PostBody(), &newUser)
 	if err != nil {
-		responses.SendServerError(err.Error(), w)
-		return
-	}
-
-	err = json.Unmarshal(data, &newUser)
-	if err != nil {
-		responses.SendServerError(err.Error(), w)
+		responses.SendServerError(err.Error(), ctx)
 		return
 	}
 
@@ -59,25 +51,25 @@ func (ur *userHandler) Add(w http.ResponseWriter, r *http.Request) {
 	if pgerr, ok := err.(*pq.Error); ok && pgerr.Code == "23505" {
 		users, err := ur.userRepo.GetByNickAndEmail(newUser.Nickname, newUser.Email)
 		if err != nil {
-			responses.SendServerError(err.Error(), w)
+			responses.SendServerError(err.Error(), ctx)
 		}
-		responses.SendResponse(409, users, w)
+		responses.SendResponse(409, users, ctx)
 		return
 	}
 
 	if err != nil {
-		responses.SendResponse(400, err.Error(), w)
+		responses.SendResponse(400, err.Error(), ctx)
 		return
 	}
 
-	responses.SendResponse(201, newUser, w)
+	responses.SendResponse(201, newUser, ctx)
 	return
 }
 
-func (ur *userHandler) Get(w http.ResponseWriter, r *http.Request) {
-	nickname, found := mux.Vars(r)["nickname"]
+func (ur *userHandler) Get(ctx *fasthttp.RequestCtx) {
+	nickname, found := ctx.UserValue("nickname").(string)
 	if !found {
-		responses.SendResponse(400, "bad request", w)
+		responses.SendResponse(400, "bad request", ctx)
 		return
 	}
 
@@ -87,36 +79,29 @@ func (ur *userHandler) Get(w http.ResponseWriter, r *http.Request) {
 			err := responses.HttpError{
 				Message: fmt.Sprintf("Can't find user by nickname: %s", nickname),
 			}
-			responses.SendResponse(404, err, w)
+			responses.SendResponse(404, err, ctx)
 			return
 		}
-		responses.SendServerError(err.Error(), w)
+		responses.SendServerError(err.Error(), ctx)
 		return
 	}
 
-	responses.SendResponseOK(userObj, w)
+	responses.SendResponseOK(userObj, ctx)
 	return
 }
 
-func (ur *userHandler) Update(w http.ResponseWriter, r *http.Request) {
-	nickname, found := mux.Vars(r)["nickname"]
+func (ur *userHandler) Update(ctx *fasthttp.RequestCtx) {
+	nickname, found := ctx.UserValue("nickname").(string)
 	if !found {
-		responses.SendResponse(400, "bad request", w)
+		responses.SendResponse(400, "bad request", ctx)
 		return
 	}
 
 	newUser := models.User{Nickname: nickname}
 
-	data, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
+	err := json.Unmarshal(ctx.PostBody(), &newUser)
 	if err != nil {
-		responses.SendServerError(err.Error(), w)
-		return
-	}
-
-	err = json.Unmarshal(data, &newUser)
-	if err != nil {
-		responses.SendServerError(err.Error(), w)
+		responses.SendServerError(err.Error(), ctx)
 		return
 	}
 
@@ -127,7 +112,7 @@ func (ur *userHandler) Update(w http.ResponseWriter, r *http.Request) {
 			err := responses.HttpError{
 				Message: fmt.Sprintf("This email is already registered by user: %s", newUser.Email),
 			}
-			responses.SendResponse(409, err, w)
+			responses.SendResponse(409, err, ctx)
 			return
 		}
 	}
@@ -136,97 +121,83 @@ func (ur *userHandler) Update(w http.ResponseWriter, r *http.Request) {
 			err := responses.HttpError{
 				Message: fmt.Sprintf("Can't find user by nickname: %s", newUser.Nickname),
 			}
-			responses.SendResponse(404, err, w)
+			responses.SendResponse(404, err, ctx)
 			return
 		}
-		responses.SendServerError(err.Error(), w)
+		responses.SendServerError(err.Error(), ctx)
 	}
 
-	responses.SendResponseOK(userDB, w)
+	responses.SendResponseOK(userDB, ctx)
 	return
 }
 
-func extractBoolValue(r *http.Request, valueName string) (bool, error) {
-	ValueStr, ok := r.URL.Query()[valueName]
+func extractBoolValue(ctx *fasthttp.RequestCtx, valueName string) (bool, error) {
+	ValueStr := string(ctx.QueryArgs().Peek(valueName))
 	var value bool
 	var err error
 
-	if !ok {
-		value = false
-	} else {
-		value, err = strconv.ParseBool(ValueStr[0])
-		if err != nil {
-			return false, err
-		} else if len(ValueStr) > 1 {
-			return false, err
-		}
+	value, err = strconv.ParseBool(ValueStr)
+	if err != nil {
+		return false, err
+	} else if len(ValueStr) > 1 {
+		return false, err
 	}
 
 	return value, nil
 }
 
-func extractIntValue(r *http.Request, valueName string) (int, error) {
-	ValueStr, ok := r.URL.Query()[valueName]
+func extractIntValue(ctx *fasthttp.RequestCtx, valueName string) (int, error) {
+	ValueStr := string(ctx.QueryArgs().Peek(valueName))
 	var value int
 	var err error
 
-	if !ok {
-		value = 0
-	} else {
-		value, err = strconv.Atoi(ValueStr[0])
-		if err != nil {
-			return -1, err
-		} else if len(ValueStr) > 1 {
-			return -1, err
-		}
+	value, err = strconv.Atoi(ValueStr)
+	if err != nil {
+		return -1, err
+	} else if len(ValueStr) > 1 {
+		return -1, err
 	}
 
 	return value, nil
 }
 
-func (ur *userHandler) GetByForum(w http.ResponseWriter, r *http.Request) {
-	slug, found := mux.Vars(r)["slug"]
+func (ur *userHandler) GetByForum(ctx *fasthttp.RequestCtx) {
+	slug, found := ctx.UserValue("slug").(string)
 	if !found {
-		responses.SendResponse(400, "bad request", w)
+		responses.SendResponse(400, "bad request", ctx)
 		return
 	}
 
-	limit, err := extractIntValue(r, "limit")
+	limit, err := extractIntValue(ctx, "limit")
 	if err != nil {
-		responses.SendResponse(400, err, w)
+		responses.SendResponse(400, err, ctx)
 		return
 	}
 
-	var since string
-	sinceRow, ok := r.URL.Query()["since"]
-	if !ok || len(sinceRow) == 0 {
-		since = ""
-	} else {
-		since = sinceRow[0]
-	}
+	since := string(ctx.QueryArgs().Peek("since"))
 
-	desc, err := extractBoolValue(r, "desc")
+	desc, err := extractBoolValue(ctx, "desc")
 	if err != nil {
-		responses.SendResponse(400, err, w)
+		responses.SendResponse(400, err, ctx)
 		return
 	}
 
 	users, err := ur.userRepo.GetUsersByForum(slug, limit, since, desc)
 	if err != nil {
-		responses.SendResponse(404, err, w)
+		responses.SendResponse(404, err, ctx)
 		return
 	}
 
 	if users == nil {
 		_, err = ur.forumRepo.GetBySlug(slug)
 		if err != nil {
-			responses.SendResponse(404, err, w)
+			responses.SendResponse(404, err, ctx)
 			return
 		}
-		responses.SendResponseOK([]models.User{}, w)
+		responses.SendResponseOK([]models.User{}, ctx)
 		return
 	}
 
-	responses.SendResponseOK(users, w)
+	responses.SendResponseOK(users, ctx)
 	return
 }

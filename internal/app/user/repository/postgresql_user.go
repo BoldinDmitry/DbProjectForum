@@ -78,6 +78,7 @@ func (p *postgresUserRepository) GetUsersByForum(slug string, limit int, since s
         ORDER BY lower(users.Nickname) LIMIT NULLIF($2, 0)`, since)
 	}
 	var data []models.User
+	fmt.Println(query)
 	err := p.Conn.Select(&data, query, slug, limit)
 	return data, err
 }

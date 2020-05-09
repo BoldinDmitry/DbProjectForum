@@ -7,19 +7,18 @@ import (
 	_userHandlers "DbProjectForum/internal/app/user/delivery"
 	_userRepo "DbProjectForum/internal/app/user/repository"
 	"fmt"
-	"github.com/gorilla/mux"
+	"github.com/fasthttp/router"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog/log"
-	"net/http"
-	"time"
+	"github.com/valyala/fasthttp"
 )
 
-func applicationJSON(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
-		next.ServeHTTP(w, r)
-	})
+func applicationJSON(next fasthttp.RequestHandler) fasthttp.RequestHandler {
+	return func(ctx *fasthttp.RequestCtx) {
+		ctx.Response.Header.Set("Content-Type", "application/json")
+		next(ctx)
+	}
 }
 
 //func loggingMiddleware(next http.Handler) http.Handler {
@@ -33,12 +32,12 @@ func applicationJSON(next http.Handler) http.Handler {
 //}
 
 func main() {
-	r := mux.NewRouter()
+	r := router.New()
 
-	r.Use(applicationJSON)
+	//r.Use(applicationJSON)
 	//r.Use(loggingMiddleware)
 
-	connStr := fmt.Sprintf("user=%s password=%s dbname=docker sslmode=disable port=%s",
+	connStr := fmt.Sprintf("user=%s password=%s dbname=postgres sslmode=disable port=%s",
 		configs.PostgresPreferences.User,
 		configs.PostgresPreferences.Password,
 		configs.PostgresPreferences.Port)
@@ -54,13 +53,5 @@ func main() {
 	_userHandlers.NewUserHandler(r, userRepo, forumRepo)
 	_forumHandlers.NewForumHandler(r, forumRepo)
 
-	http.Handle("/", r)
-	log.Info().Msgf("starting server at :5000")
-	srv := &http.Server{
-		Handler:      r,
-		Addr:         ":5000",
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
-	}
-	log.Error().Msgf(srv.ListenAndServe().Error())
+	log.Error().Msgf(fasthttp.ListenAndServe(":5000", applicationJSON(r.Handler)).Error())
 }
