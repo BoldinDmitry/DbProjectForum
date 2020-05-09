@@ -136,10 +136,11 @@ func extractBoolValue(ctx *fasthttp.RequestCtx, valueName string) (bool, error) 
 	var value bool
 	var err error
 
+	if ValueStr == "" {
+		return false, nil
+	}
 	value, err = strconv.ParseBool(ValueStr)
 	if err != nil {
-		return false, err
-	} else if len(ValueStr) > 1 {
 		return false, err
 	}
 
@@ -151,10 +152,12 @@ func extractIntValue(ctx *fasthttp.RequestCtx, valueName string) (int, error) {
 	var value int
 	var err error
 
+	if ValueStr == "" {
+		return 0, nil
+	}
+
 	value, err = strconv.Atoi(ValueStr)
 	if err != nil {
-		return -1, err
-	} else if len(ValueStr) > 1 {
 		return -1, err
 	}
 

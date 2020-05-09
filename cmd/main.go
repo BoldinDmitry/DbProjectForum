@@ -16,6 +16,7 @@ import (
 
 func applicationJSON(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
+		fmt.Println(ctx.URI())
 		ctx.Response.Header.Set("Content-Type", "application/json")
 		next(ctx)
 	}

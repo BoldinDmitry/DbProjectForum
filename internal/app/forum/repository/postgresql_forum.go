@@ -131,7 +131,6 @@ func (p *postgresForumRepository) GetThreadIDBySlug(slug string) (int, error) {
 	query := `SELECT id FROM thread WHERE LOWER(slug)=LOWER($1)`
 
 	var id int
-
 	err := p.conn.Get(&id, query, slug)
 	return id, err
 }
