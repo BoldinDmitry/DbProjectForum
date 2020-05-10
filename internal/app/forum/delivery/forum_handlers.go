@@ -200,7 +200,6 @@ func (f *forumHandler) GetThreads(ctx *fasthttp.RequestCtx) {
 		responses.SendServerError(err.Error(), ctx)
 		return
 	}
-	fmt.Println("ALL:", limit, since, desc, forumSlug)
 	threads, err := f.forumRepo.GetThreads(forumSlug, limit, since, desc)
 	if err == sql.ErrNoRows || len(threads) == 0 {
 		exists, err := f.forumRepo.CheckThreadExists(forumSlug)
