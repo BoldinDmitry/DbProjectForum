@@ -168,17 +168,18 @@ CREATE INDEX post_thread_index ON post ((post.thread)); -- +
 
 CREATE INDEX forum_slug_lower_index ON forum (lower(forum.Slug)); -- +
 
-CREATE INDEX users_nickname_lower_index ON users (lower(users.Nickname)); -- +
-CREATE INDEX users_nickname_email_index ON users (lower(users.Nickname), Email); -- +
+CREATE INDEX users_nickname_lower_index ON users (lower(users.Nickname));
+CREATE INDEX users_nickname_index ON users ((users.Nickname));
+CREATE INDEX users_email_index ON users (lower(Email));
 
-CREATE INDEX users_forum_forum_user_index ON users_forum ((users_forum.Slug), nickname); -- +
-CREATE INDEX users_forum_forum_index ON users_forum ((users_forum.Slug)); -- +
-CREATE INDEX users_forum_user_index ON users_forum (nickname); -- +
+CREATE INDEX users_forum_forum_user_index ON users_forum (lower(users_forum.Slug), nickname);
+CREATE INDEX users_forum_user_index ON users_forum (nickname);
 
-CREATE INDEX thread_slug_lower_index ON thread (lower(slug)); -- +
+CREATE INDEX thread_slug_lower_index ON thread (lower(slug));
+CREATE INDEX thread_slug_index ON thread (slug);
+CREATE INDEX thread_slug_id_index ON thread (lower(slug), id);
 CREATE INDEX thread_forum_lower_index ON thread (lower(forum)); -- +
-CREATE INDEX thread_slug_id_index ON thread (lower(slug), id); -- +
-CREATE INDEX thread_id_forum_index ON thread (id, forum); -- +
-CREATE INDEX thread_created_index ON thread (created); -- +
+CREATE INDEX thread_id_forum_index ON thread (id, forum);
+CREATE INDEX thread_created_index ON thread (created);
 
 CREATE INDEX vote_nickname ON vote (lower(nickname), idThread, voice); -- +
