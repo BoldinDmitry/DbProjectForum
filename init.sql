@@ -1,3 +1,5 @@
+SET default_statistics_target TO 300;
+
 CREATE EXTENSION IF NOT EXISTS citext;
 
 CREATE TABLE "users"
@@ -98,25 +100,6 @@ CREATE TABLE users_forum
     FOREIGN KEY (nickname) REFERENCES "users" (nickname),
     FOREIGN KEY (Slug) REFERENCES "forum" (Slug),
     UNIQUE (nickname, Slug)
-);
-
-ALTER TABLE post SET (
-    autovacuum_enabled = false
-);
-ALTER TABLE users_forum SET (
-    autovacuum_enabled = false
-);
-ALTER TABLE vote SET (
-    autovacuum_enabled = false
-);
-ALTER TABLE thread SET (
-    autovacuum_enabled = false
-);
-ALTER TABLE forum SET (
-    autovacuum_enabled = false
-);
-ALTER TABLE users SET (
-    autovacuum_enabled = false
 );
 
 CREATE OR REPLACE FUNCTION insert_votes() RETURNS TRIGGER AS
