@@ -100,6 +100,25 @@ CREATE TABLE users_forum
     UNIQUE (nickname, Slug)
 );
 
+ALTER TABLE post SET (
+    autovacuum_enabled = false
+);
+ALTER TABLE users_forum SET (
+    autovacuum_enabled = false
+);
+ALTER TABLE vote SET (
+    autovacuum_enabled = false
+);
+ALTER TABLE thread SET (
+    autovacuum_enabled = false
+);
+ALTER TABLE forum SET (
+    autovacuum_enabled = false
+);
+ALTER TABLE users SET (
+    autovacuum_enabled = false
+);
+
 CREATE OR REPLACE FUNCTION insert_votes() RETURNS TRIGGER AS
 $update_users_forum$
 BEGIN
