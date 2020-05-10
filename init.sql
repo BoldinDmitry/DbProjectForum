@@ -184,3 +184,9 @@ CREATE INDEX thread_id_forum_index ON thread (id, forum);
 CREATE INDEX thread_created_index ON thread (created);
 
 CREATE INDEX vote_nickname ON vote (lower(nickname), idThread, voice); -- +
+
+-- NEW INDEXES
+CREATE INDEX post_path_id_index ON post (id, (post.path));
+CREATE INDEX post_thread_path_id_index ON post (thread, (post.parent), id);
+
+CREATE INDEX users_forum_forum_index ON users_forum ((users_forum.Slug)); -- +
