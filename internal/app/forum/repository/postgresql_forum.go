@@ -378,7 +378,7 @@ func (p *postgresForumRepository) UpdateThread(newThread models.Thread) (models.
 		err := p.conn.Get(&thread, query, newThread.Message, newThread.Title, newThread.Id)
 		return thread, err
 	} else {
-		query += `slug = $3 RETURNING *`
+		query += `LOWER(slug) = LOWER($3) RETURNING *`
 		var thread models.Thread
 		err := p.conn.Get(&thread, query, newThread.Message, newThread.Title, newThread.Slug)
 		return thread, err
