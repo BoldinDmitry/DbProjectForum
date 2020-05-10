@@ -90,6 +90,7 @@ CREATE TABLE vote
     UNIQUE (nickname, idThread)
 );
 
+
 CREATE TABLE users_forum
 (
     nickname citext NOT NULL,
@@ -159,12 +160,12 @@ CREATE TRIGGER edit_vote
     FOR EACH ROW
 EXECUTE PROCEDURE update_votes();
 
-CREATE INDEX post_first_parent_thread_index ON post ((post.path[1]), thread); -- +
-CREATE INDEX post_first_parent_id_index ON post (id, (post.path[1])); -- +
-CREATE INDEX post_path_id_index ON post (id, (post.path)); -- +
-CREATE INDEX post_thread_path_id_index ON post (thread, (post.parent), id); -- +
-CREATE INDEX post_path_index ON post ((post.path)); -- +
-CREATE INDEX post_thread_index ON post ((post.thread)); -- +
+CREATE INDEX post_first_parent_thread_index ON post ((post.path[1]), thread);
+CREATE INDEX post_first_parent_id_index ON post ((post.path[1]), id);
+CREATE INDEX post_first_parent_index ON post ((post.path[1]));
+CREATE INDEX post_path_index ON post ((post.path));
+CREATE INDEX post_thread_index ON post (thread); -- -
+CREATE INDEX post_thread_id_index ON post (thread, id); -- +
 
 CREATE INDEX forum_slug_lower_index ON forum (lower(forum.Slug)); -- +
 
