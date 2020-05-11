@@ -1,4 +1,3 @@
-SET default_statistics_target TO 300;
 SET random_page_cost TO 1; --for SSD
 
 CREATE EXTENSION IF NOT EXISTS citext;
