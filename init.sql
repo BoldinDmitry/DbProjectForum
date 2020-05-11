@@ -163,9 +163,8 @@ CREATE TRIGGER edit_vote
 EXECUTE PROCEDURE update_votes();
 
 CREATE INDEX post_first_parent_index ON post ((post.path[1]));
-CREATE INDEX post_path_index ON post ((post.path));
 CREATE INDEX post_thread_index ON post (thread); -- -
-CREATE INDEX post_thread_id_index ON post (thread, id); -- +
+CREATE INDEX post_thread_id_index ON post (id, thread); -- +
 
 CREATE INDEX forum_slug_lower_index ON forum (lower(forum.Slug)); -- +
 
@@ -183,7 +182,6 @@ CREATE INDEX vote_nickname ON vote (lower(nickname), idThread, voice); -- +
 
 -- NEW INDEXES
 CREATE INDEX post_path_id_index ON post (id, (post.path));
-CREATE INDEX post_thread_path_id_index ON post (thread, (post.parent), id);
 
 CREATE INDEX users_forum_forum_index ON users_forum ((users_forum.Slug)); -- +
 
@@ -191,3 +189,5 @@ CREATE INDEX users_forum_forum_index ON users_forum ((users_forum.Slug)); -- +
 CREATE INDEX thread_slug_id_created_index ON thread (lower(slug), created, id);
 
 CREATE INDEX users_forum_slug_nickname_index ON users_forum (slug, nickname);
+
+CREATE INDEX post_first_parent_thread_index ON post (id, thread);
