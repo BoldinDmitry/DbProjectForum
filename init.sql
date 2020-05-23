@@ -134,7 +134,7 @@ CREATE TABLE users_forum
 CREATE OR REPLACE FUNCTION insert_votes() RETURNS TRIGGER AS
 $update_users_forum$
 BEGIN
-    UPDATE thread SET votes=(votes+NEW.voice) WHERE id=NEW.idThread;
+    UPDATE thread SET votes=(votes + NEW.voice) WHERE id = NEW.idThread;
     return NEW;
 end
 $update_users_forum$ LANGUAGE plpgsql;
@@ -142,7 +142,7 @@ $update_users_forum$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION update_votes() RETURNS TRIGGER AS
 $update_users_forum$
 BEGIN
-    UPDATE thread SET votes=(votes+NEW.voice*2) WHERE id=NEW.idThread;
+    UPDATE thread SET votes=(votes + NEW.voice * 2) WHERE id = NEW.idThread;
     return NEW;
 end
 $update_users_forum$ LANGUAGE plpgsql;
@@ -150,7 +150,7 @@ $update_users_forum$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION update_threads_count() RETURNS TRIGGER AS
 $update_users_forum$
 BEGIN
-    UPDATE forum SET Threads=(Threads+1) WHERE LOWER(slug)=LOWER(NEW.forum);
+    UPDATE forum SET Threads=(Threads + 1) WHERE LOWER(slug) = LOWER(NEW.forum);
     return NEW;
 end
 $update_users_forum$ LANGUAGE plpgsql;
@@ -222,3 +222,5 @@ CREATE INDEX post_path_id_index ON post (id, (post.path));
 CREATE INDEX post_thread_path_id_index ON post (thread, (post.parent), id);
 
 CREATE INDEX users_forum_forum_index ON users_forum ((users_forum.Slug)); -- +
+CREATE INDEX users_forum_user_index ON users_forum (nickname);
+CREATE INDEX users_forum_user_index ON users_forum (lower(nickname));
