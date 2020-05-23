@@ -1,15 +1,15 @@
 ALTER SYSTEM SET
-    max_connections = '300';
+    max_connections = '200';
 ALTER SYSTEM SET
-    shared_buffers = '200GB';
+    shared_buffers = '200MB';
 ALTER SYSTEM SET
-    effective_cache_size = '600GB';
+    effective_cache_size = '600MB';
 ALTER SYSTEM SET
-    maintenance_work_mem = '2GB';
+    maintenance_work_mem = '50MB';
 ALTER SYSTEM SET
-    checkpoint_completion_target = '0.9';
+    checkpoint_completion_target = '0.7';
 ALTER SYSTEM SET
-    wal_buffers = '16MB';
+    wal_buffers = '6MB';
 ALTER SYSTEM SET
     default_statistics_target = '100';
 ALTER SYSTEM SET
@@ -17,19 +17,17 @@ ALTER SYSTEM SET
 ALTER SYSTEM SET
     effective_io_concurrency = '200';
 ALTER SYSTEM SET
-    work_mem = '699050kB';
+    work_mem = '1MB';
 ALTER SYSTEM SET
-    min_wal_size = '2GB';
+    min_wal_size = '1GB';
 ALTER SYSTEM SET
-    max_wal_size = '8GB';
+    max_wal_size = '4GB';
 ALTER SYSTEM SET
     max_worker_processes = '2';
 ALTER SYSTEM SET
     max_parallel_workers_per_gather = '1';
 ALTER SYSTEM SET
     max_parallel_workers = '2';
-ALTER SYSTEM SET
-    max_parallel_maintenance_workers = '1';
 
 CREATE EXTENSION IF NOT EXISTS citext;
 
