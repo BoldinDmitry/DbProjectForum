@@ -1,34 +1,3 @@
-ALTER SYSTEM SET
-    max_connections = '300';
-ALTER SYSTEM SET
-    shared_buffers = '225MB';
-ALTER SYSTEM SET
-    effective_cache_size = '675MB';
-ALTER SYSTEM SET
-    maintenance_work_mem = '57600kB';
-ALTER SYSTEM SET
-    checkpoint_completion_target = '0.9';
-ALTER SYSTEM SET
-    wal_buffers = '6912kB';
-ALTER SYSTEM SET
-    default_statistics_target = '100';
-ALTER SYSTEM SET
-    random_page_cost = '1.1';
-ALTER SYSTEM SET
-    effective_io_concurrency = '200';
-ALTER SYSTEM SET
-    work_mem = '768kB';
-ALTER SYSTEM SET
-    min_wal_size = '2GB';
-ALTER SYSTEM SET
-    max_wal_size = '8GB';
-ALTER SYSTEM SET
-    max_worker_processes = '2';
-ALTER SYSTEM SET
-    max_parallel_workers_per_gather = '1';
-ALTER SYSTEM SET
-    max_parallel_workers = '2';
-
 CREATE EXTENSION IF NOT EXISTS citext;
 
 CREATE TABLE "users"
@@ -222,5 +191,4 @@ CREATE INDEX post_path_id_index ON post (id, (post.path));
 CREATE INDEX post_thread_path_id_index ON post (thread, (post.parent), id);
 
 CREATE INDEX users_forum_forum_index ON users_forum ((users_forum.Slug)); -- +
-CREATE INDEX users_forum_user_index ON users_forum (nickname);
-CREATE INDEX users_forum_user_index ON users_forum (lower(nickname));
+CREATE INDEX users_forum_user_lower_index ON users_forum (lower(nickname));
