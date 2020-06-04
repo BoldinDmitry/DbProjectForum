@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS citext;
 
-CREATE TABLE "users"
+CREATE UNLOGGED TABLE "users"
 (
     About    text,
     Email    citext UNIQUE,
@@ -8,7 +8,7 @@ CREATE TABLE "users"
     Nickname citext PRIMARY KEY
 );
 
-CREATE TABLE forum
+CREATE UNLOGGED TABLE forum
 (
     "user"  citext,
     Posts   BIGINT DEFAULT 0,
@@ -18,7 +18,7 @@ CREATE TABLE forum
     FOREIGN KEY ("user") REFERENCES "users" (nickname)
 );
 
-CREATE TABLE thread
+CREATE UNLOGGED TABLE thread
 (
     author  citext,
     created timestamp with time zone default now(),
@@ -40,7 +40,7 @@ end
 $update_users_forum$ LANGUAGE plpgsql;
 
 
-CREATE TABLE post
+CREATE UNLOGGED TABLE post
 (
     author   citext NOT NULL,
     created  timestamp with time zone default now(),
@@ -79,7 +79,7 @@ BEGIN
 end
 $update_path$ LANGUAGE plpgsql;
 
-CREATE TABLE vote
+CREATE UNLOGGED TABLE vote
 (
     nickname citext NOT NULL,
     voice    INT,
@@ -91,7 +91,7 @@ CREATE TABLE vote
 );
 
 
-CREATE TABLE users_forum
+CREATE UNLOGGED TABLE users_forum
 (
     nickname citext NOT NULL,
     Slug     citext NOT NULL,
