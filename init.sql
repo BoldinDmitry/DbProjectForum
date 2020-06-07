@@ -10,12 +10,6 @@ ALTER SYSTEM SET
     random_page_cost = '1.1';
 ALTER SYSTEM SET
     effective_io_concurrency = '200';
-ALTER SYSTEM SET
-    max_worker_processes = '2';
-ALTER SYSTEM SET
-    max_parallel_workers_per_gather = '1';
-ALTER SYSTEM SET
-    max_parallel_workers = '2';
 
 CREATE UNLOGGED TABLE "users"
 (
