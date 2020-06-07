@@ -4,14 +4,14 @@ import (
 	"DbProjectForum/internal/app/user"
 	"DbProjectForum/internal/app/user/models"
 	"fmt"
-	"github.com/jmoiron/sqlx"
+	"github.com/jackc/pgx"
 )
 
 type postgresUserRepository struct {
-	Conn *sqlx.DB
+	Conn *pgx.ConnPool
 }
 
-func NewPostgresCafeRepository(conn *sqlx.DB) user.Repository {
+func NewPostgresCafeRepository(conn *pgx.ConnPool) user.Repository {
 	return &postgresUserRepository{
 		Conn: conn,
 	}
@@ -33,7 +33,32 @@ func (p *postgresUserRepository) GetByNickAndEmail(nickname, email string) ([]mo
 	query := `SELECT * FROM users WHERE LOWER(Nickname)=LOWER($1) OR Email=$2`
 
 	var data []models.User
-	err := p.Conn.Select(&data, query, nickname, email)
+
+	row, err := p.Conn.Query(query, nickname, email)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if row != nil {
+			row.Close()
+		}
+	}()
+
+	for row.Next() {
+
+		var u models.User
+
+		err = row.Scan(&u.About, &u.Email, &u.FullName, &u.Nickname)
+
+		if err != nil {
+			return nil, err
+		}
+
+		data = append(data, u)
+	}
+
 	return data, err
 }
 
@@ -41,7 +66,7 @@ func (p *postgresUserRepository) GetByNick(nickname string) (models.User, error)
 	query := `SELECT * FROM users WHERE LOWER(Nickname)=LOWER($1)`
 
 	var userObj models.User
-	err := p.Conn.Get(&userObj, query, nickname)
+	err := p.Conn.QueryRow(query, nickname).Scan(&userObj.About, &userObj.Email, &userObj.FullName, &userObj.Nickname)
 	return userObj, err
 }
 
@@ -53,7 +78,7 @@ func (p *postgresUserRepository) Update(user models.User) (models.User, error) {
 	WHERE LOWER(nickname) = LOWER($4) RETURNING *`
 
 	var userObj models.User
-	err := p.Conn.Get(&userObj, query, user.About, user.Email, user.FullName, user.Nickname)
+	err := p.Conn.QueryRow(query, user.About, user.Email, user.FullName, user.Nickname).Scan(&userObj.About, &userObj.Email, &userObj.FullName, &userObj.Nickname)
 	return userObj, err
 }
 
@@ -78,6 +103,30 @@ func (p *postgresUserRepository) GetUsersByForum(slug string, limit int, since s
         ORDER BY lower(users.Nickname) LIMIT NULLIF($2, 0)`, since)
 	}
 	var data []models.User
-	err := p.Conn.Select(&data, query, slug, limit)
+	row, err := p.Conn.Query(query, slug, limit)
+
+	if err != nil {
+		return data, nil
+	}
+
+	defer func() {
+		if row != nil {
+			row.Close()
+		}
+	}()
+
+	for row.Next() {
+
+		var u models.User
+
+		err = row.Scan(&u.About, &u.Email, &u.FullName, &u.Nickname)
+
+		if err != nil {
+			return data, err
+		}
+
+		data = append(data, u)
+	}
+
 	return data, err
 }

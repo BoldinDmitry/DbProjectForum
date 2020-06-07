@@ -8,8 +8,7 @@ import (
 	_userRepo "DbProjectForum/internal/app/user/repository"
 	"fmt"
 	"github.com/fasthttp/router"
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx"
 	"github.com/rs/zerolog/log"
 	"github.com/valyala/fasthttp"
 )
@@ -43,16 +42,31 @@ func main() {
 		configs.PostgresPreferences.DBName,
 		configs.PostgresPreferences.Port)
 
-	conn, err := sqlx.Open("postgres", connStr)
+	pgxConn, err := pgx.ParseConnectionString(connStr)
+	if err != nil {
+		log.Error().Msgf(err.Error())
+		return
+	}
+
+	pgxConn.PreferSimpleProtocol = true
+
+	config := pgx.ConnPoolConfig{
+		ConnConfig:     pgxConn,
+		MaxConnections: 100,
+		AfterConnect:   nil,
+		AcquireTimeout: 0,
+	}
+
+	connPool, err := pgx.NewConnPool(config)
 	if err != nil {
 		log.Error().Msgf(err.Error())
 	}
 
-	userRepo := _userRepo.NewPostgresCafeRepository(conn)
-	forumRepo := _forumRepo.NewPostgresForumRepository(conn, userRepo)
+	userRepo := _userRepo.NewPostgresCafeRepository(connPool)
+	forumRepo := _forumRepo.NewPostgresForumRepository(connPool, userRepo)
 
 	_userHandlers.NewUserHandler(r, userRepo, forumRepo)
-	_forumHandlers.NewForumHandler(r, forumRepo)
+	_forumHandlers.NewForumHandler(r, forumRepo, userRepo)
 
 	log.Error().Msgf(fasthttp.ListenAndServe(":5000", applicationJSON(r.Handler)).Error())
 }

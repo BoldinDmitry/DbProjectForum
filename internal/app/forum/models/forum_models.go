@@ -3,7 +3,7 @@ package models
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/lib/pq"
+	"github.com/jackc/pgtype"
 )
 
 type Forum struct {
@@ -78,15 +78,15 @@ func (v *JsonNullString) UnmarshalJSON(data []byte) error {
 }
 
 type Post struct {
-	Author   string        `json:"author"`
-	Created  string        `json:"created"`
-	Forum    string        `json:"forum"`
-	Id       int64         `json:"id"`
-	IsEdited bool          `json:"isEdited"`
-	Message  string        `json:"message"`
-	Parent   JsonNullInt64 `json:"parent"`
-	Thread   int32         `json:"thread"`
-	Path     pq.Int64Array `json:"-"`
+	Author   string           `json:"author"`
+	Created  string           `json:"created"`
+	Forum    string           `json:"forum"`
+	Id       int64            `json:"id"`
+	IsEdited bool             `json:"isEdited"`
+	Message  string           `json:"message"`
+	Parent   JsonNullInt64    `json:"parent"`
+	Thread   int32            `json:"thread"`
+	Path     pgtype.Int8Array `json:"-"`
 }
 
 type Vote struct {

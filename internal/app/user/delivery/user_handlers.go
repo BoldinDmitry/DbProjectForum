@@ -5,11 +5,10 @@ import (
 	"DbProjectForum/internal/app/user"
 	"DbProjectForum/internal/app/user/models"
 	"DbProjectForum/internal/pkg/responses"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/fasthttp/router"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx"
 	"github.com/valyala/fasthttp"
 	"strconv"
 )
@@ -48,17 +47,13 @@ func (ur *userHandler) Add(ctx *fasthttp.RequestCtx) {
 	}
 
 	err = ur.userRepo.Add(newUser)
-	if pgerr, ok := err.(*pq.Error); ok && pgerr.Code == "23505" {
+
+	if err != nil {
 		users, err := ur.userRepo.GetByNickAndEmail(newUser.Nickname, newUser.Email)
 		if err != nil {
 			responses.SendServerError(err.Error(), ctx)
 		}
 		responses.SendResponse(409, users, ctx)
-		return
-	}
-
-	if err != nil {
-		responses.SendResponse(400, err.Error(), ctx)
 		return
 	}
 
@@ -75,14 +70,10 @@ func (ur *userHandler) Get(ctx *fasthttp.RequestCtx) {
 
 	userObj, err := ur.userRepo.GetByNick(nickname)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			err := responses.HttpError{
-				Message: fmt.Sprintf("Can't find user by nickname: %s", nickname),
-			}
-			responses.SendResponse(404, err, ctx)
-			return
+		err := responses.HttpError{
+			Message: fmt.Sprintf("Can't find user by nickname: %s", nickname),
 		}
-		responses.SendServerError(err.Error(), ctx)
+		responses.SendResponse(404, err, ctx)
 		return
 	}
 
@@ -106,7 +97,7 @@ func (ur *userHandler) Update(ctx *fasthttp.RequestCtx) {
 	}
 
 	userDB, err := ur.userRepo.Update(newUser)
-	if pgerr, ok := err.(*pq.Error); ok {
+	if pgerr, ok := err.(pgx.PgError); ok {
 		switch pgerr.Code {
 		case "23505":
 			err := responses.HttpError{
@@ -117,14 +108,11 @@ func (ur *userHandler) Update(ctx *fasthttp.RequestCtx) {
 		}
 	}
 	if err != nil {
-		if err == sql.ErrNoRows {
-			err := responses.HttpError{
-				Message: fmt.Sprintf("Can't find user by nickname: %s", newUser.Nickname),
-			}
-			responses.SendResponse(404, err, ctx)
-			return
+		err := responses.HttpError{
+			Message: fmt.Sprintf("Can't find user by nickname: %s", newUser.Nickname),
 		}
-		responses.SendServerError(err.Error(), ctx)
+		responses.SendResponse(404, err, ctx)
+		return
 	}
 
 	responses.SendResponseOK(userDB, ctx)

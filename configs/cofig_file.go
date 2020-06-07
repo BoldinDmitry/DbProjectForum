@@ -4,9 +4,9 @@ var PostgresPreferences postgresPreferencesStruct
 
 func init() {
 	PostgresPreferences = postgresPreferencesStruct{
-		User:     "docker",
-		Password: "docker",
-		DBName:   "docker",
+		User:     "postgres",
+		Password: "",
+		DBName:   "postgres",
 		Port:     "5432",
 	}
 }

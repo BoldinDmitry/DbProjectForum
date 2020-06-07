@@ -3,12 +3,13 @@ package delivery
 import (
 	"DbProjectForum/internal/app/forum"
 	"DbProjectForum/internal/app/forum/models"
+	"DbProjectForum/internal/app/user"
 	"DbProjectForum/internal/pkg/responses"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/fasthttp/router"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx"
 	"github.com/valyala/fasthttp"
 	"strconv"
 	"strings"
@@ -16,10 +17,11 @@ import (
 
 type forumHandler struct {
 	forumRepo forum.Repository
+	userRepo  user.Repository
 }
 
-func NewForumHandler(r *router.Router, ur forum.Repository) {
-	handler := forumHandler{forumRepo: ur}
+func NewForumHandler(r *router.Router, fr forum.Repository, ur user.Repository) {
+	handler := forumHandler{forumRepo: fr, userRepo: ur}
 
 	r.POST("/api/forum/create", handler.Add)
 	r.GET("/api/forum/{slug}/details", handler.Get)
@@ -53,7 +55,7 @@ func (f *forumHandler) Add(ctx *fasthttp.RequestCtx) {
 	}
 
 	newForumDB, err := f.forumRepo.Add(newForum)
-	if pgerr, ok := err.(*pq.Error); ok {
+	if pgerr, ok := err.(pgx.PgError); ok {
 		switch pgerr.Code {
 		case "23505":
 			forumObj, err := f.forumRepo.GetBySlug(newForum.Slug)
@@ -72,7 +74,7 @@ func (f *forumHandler) Add(ctx *fasthttp.RequestCtx) {
 		}
 
 	}
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		err := responses.HttpError{
 			Message: fmt.Sprintf("Can't find user with nickname: %s", newForum.User),
 		}
@@ -97,7 +99,7 @@ func (f *forumHandler) Get(ctx *fasthttp.RequestCtx) {
 
 	forumObj, err := f.forumRepo.GetBySlug(slug)
 	switch err {
-	case sql.ErrNoRows:
+	case pgx.ErrNoRows:
 		err := responses.HttpError{
 			Message: fmt.Sprintf("Can't find forum with slug: %s", slug),
 		}
@@ -128,7 +130,7 @@ func (f *forumHandler) AddThread(ctx *fasthttp.RequestCtx) {
 	}
 
 	newThreadDB, err := f.forumRepo.AddThread(newThread)
-	if pgerr, ok := err.(*pq.Error); ok && pgerr.Code == "23505" {
+	if pgerr, ok := err.(pgx.PgError); ok && pgerr.Code == "23505" {
 		threadOld, err := f.forumRepo.GetThreadBySlug(newThread.Slug.String)
 		if err != nil {
 			responses.SendServerError(err.Error(), ctx)
@@ -201,7 +203,7 @@ func (f *forumHandler) GetThreads(ctx *fasthttp.RequestCtx) {
 		return
 	}
 	threads, err := f.forumRepo.GetThreads(forumSlug, limit, since, desc)
-	if err == sql.ErrNoRows || len(threads) == 0 {
+	if err == pgx.ErrNoRows || len(threads) == 0 {
 		exists, err := f.forumRepo.CheckThreadExists(forumSlug)
 		if err != nil {
 			responses.SendServerError(err.Error(), ctx)
@@ -234,11 +236,17 @@ func (f *forumHandler) createPost(ctx *fasthttp.RequestCtx, id int) {
 		responses.SendServerError(err.Error(), ctx)
 		return
 	}
-
+	if len(newPosts) == 0 {
+		responses.SendResponse(201, newPosts, ctx)
+		return
+	}
+	newPostsAuthor := newPosts[0].Author
 	newPosts, err = f.forumRepo.AddPosts(newPosts, id)
-
+	if len(newPosts) == 0 {
+		err = pgx.ErrNoRows
+	}
 	if err != nil {
-		if pgerr, ok := err.(*pq.Error); ok {
+		if pgerr, ok := err.(pgx.PgError); ok {
 			switch pgerr.Code {
 			case "00409":
 				responses.SendResponse(409, map[int]int{}, ctx)
@@ -246,9 +254,14 @@ func (f *forumHandler) createPost(ctx *fasthttp.RequestCtx, id int) {
 			}
 		}
 
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			_, err = f.forumRepo.GetThreadByID(id)
-			if err == sql.ErrNoRows {
+			if err == pgx.ErrNoRows {
+				responses.SendResponse(404, map[int]int{}, ctx)
+				return
+			}
+			_, err = f.userRepo.GetByNick(newPostsAuthor)
+			if err == pgx.ErrNoRows {
 				responses.SendResponse(404, map[int]int{}, ctx)
 				return
 			}
@@ -317,7 +330,7 @@ func (f *forumHandler) AddVoteSlug(ctx *fasthttp.RequestCtx) {
 	newVote.IdThread = int64(threadID)
 	err = f.forumRepo.AddVote(newVote)
 	if err != nil {
-		pgerr, ok := err.(*pq.Error)
+		pgerr, ok := err.(pgx.PgError)
 		if !ok {
 			errHTTP := responses.HttpError{
 				Message: fmt.Sprintf(err.Error()),
@@ -370,7 +383,7 @@ func (f *forumHandler) AddVoteID(ctx *fasthttp.RequestCtx) {
 
 	err = f.forumRepo.AddVote(newVote)
 	if err != nil {
-		pgerr, ok := err.(*pq.Error)
+		pgerr, ok := err.(pgx.PgError)
 		if !ok {
 			errHTTP := responses.HttpError{
 				Message: fmt.Sprintf(err.Error()),
@@ -519,7 +532,7 @@ func (f *forumHandler) GetPostsSlug(ctx *fasthttp.RequestCtx) {
 	if posts == nil {
 		if slugOrID.Id != 0 {
 			_, err := f.forumRepo.GetThreadByID(int(slugOrID.Id))
-			if err == sql.ErrNoRows {
+			if err == pgx.ErrNoRows {
 				httpErr := responses.HttpError{Message: err.Error()}
 				responses.SendResponse(404, httpErr, ctx)
 				return

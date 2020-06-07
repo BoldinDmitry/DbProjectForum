@@ -6,17 +6,18 @@ import (
 	"DbProjectForum/internal/app/user"
 	"errors"
 	"fmt"
-	"github.com/jmoiron/sqlx"
+	"github.com/go-openapi/strfmt"
+	"github.com/jackc/pgx"
 	"strings"
 	"time"
 )
 
 type postgresForumRepository struct {
-	conn     *sqlx.DB
+	conn     *pgx.ConnPool
 	userRepo user.Repository
 }
 
-func NewPostgresForumRepository(conn *sqlx.DB, repository user.Repository) forum.Repository {
+func NewPostgresForumRepository(conn *pgx.ConnPool, repository user.Repository) forum.Repository {
 	return &postgresForumRepository{
 		conn:     conn,
 		userRepo: repository,
@@ -36,7 +37,8 @@ func (p *postgresForumRepository) Add(forum models.Forum) (models.Forum, error) 
 	}
 
 	var forumObj models.Forum
-	err = p.conn.Get(&forumObj, query, userObj.Nickname, forum.Slug, forum.Title)
+	err = p.conn.QueryRow(query, userObj.Nickname, forum.Slug, forum.Title).Scan(&forumObj.User, &forumObj.Posts, &forumObj.Slug, &forumObj.Threads, &forumObj.Title)
+	//err = p.conn.Get(&forumObj, query, userObj.Nickname, forum.Slug, forum.Title)
 	return forumObj, err
 }
 
@@ -44,7 +46,8 @@ func (p *postgresForumRepository) GetBySlug(slug string) (models.Forum, error) {
 	query := `SELECT * FROM forum WHERE LOWER(slug)=LOWER($1)`
 
 	var forumObj models.Forum
-	err := p.conn.Get(&forumObj, query, slug)
+	err := p.conn.QueryRow(query, slug).Scan(&forumObj.User, &forumObj.Posts, &forumObj.Slug, &forumObj.Threads, &forumObj.Title)
+	//err := p.conn.Get(&forumObj, query, slug)
 
 	return forumObj, err
 }
@@ -65,13 +68,21 @@ func (p *postgresForumRepository) AddThread(thread models.Thread) (models.Thread
 	}
 
 	var threadObj models.Thread
+	var created time.Time
+
 	if thread.Created != "" {
-		err = p.conn.Get(&threadObj, query, thread.Slug, thread.Author,
-			thread.Created, thread.Message, thread.Title, forumObj.Slug)
+		err = p.conn.QueryRow(query, thread.Slug, thread.Author,
+			thread.Created, thread.Message, thread.Title, forumObj.Slug).Scan(&threadObj.Author,
+			&created, &threadObj.Forum, &threadObj.Id, &threadObj.Message, &threadObj.Slug,
+			&threadObj.Title, &threadObj.Votes)
+
 	} else {
-		err = p.conn.Get(&threadObj, query, thread.Slug, thread.Author,
-			time.Time{}, thread.Message, thread.Title, forumObj.Slug)
+		err = p.conn.QueryRow(query, thread.Slug, thread.Author,
+			time.Time{}, thread.Message, thread.Title, forumObj.Slug).Scan(&threadObj.Author,
+			&created, &threadObj.Forum, &threadObj.Id, &threadObj.Message, &threadObj.Slug,
+			&threadObj.Title, &threadObj.Votes)
 	}
+	threadObj.Created = strfmt.DateTime(created.UTC()).String()
 	return threadObj, err
 }
 
@@ -95,8 +106,34 @@ func (p *postgresForumRepository) GetThreads(slug string, limit int, since strin
 	query := fmt.Sprintf("SELECT * FROM thread WHERE %s ORDER BY created %s LIMIT NULLIF(%d, 0)",
 		whereExpression, orderExpression, limit)
 
-	var data []models.Thread
-	err := p.conn.Select(&data, query)
+	data := make([]models.Thread, 0, 0)
+	row, err := p.conn.Query(query)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if row != nil {
+			row.Close()
+		}
+	}()
+
+	for row.Next() {
+		var threadObj models.Thread
+		var created time.Time
+
+		err = row.Scan(&threadObj.Author, &created, &threadObj.Forum, &threadObj.Id, &threadObj.Message, &threadObj.Slug, &threadObj.Title, &threadObj.Votes)
+
+		if err != nil {
+			return nil, err
+		}
+
+		threadObj.Created = strfmt.DateTime(created.UTC()).String()
+
+		data = append(data, threadObj)
+	}
+
 	return data, err
 }
 
@@ -105,33 +142,41 @@ func (p *postgresForumRepository) CheckThreadExists(slug string) (bool, error) {
 
 	var exists bool
 
-	err := p.conn.Get(&exists, query, slug)
+	err := p.conn.QueryRow(query, slug).Scan(&exists)
 	return exists, err
 }
 
 func (p *postgresForumRepository) GetThreadBySlug(slug string) (models.Thread, error) {
 	query := `SELECT * FROM thread WHERE LOWER(slug)=LOWER($1)`
 
-	var thread models.Thread
+	var threadObj models.Thread
+	var created time.Time
 
-	err := p.conn.Get(&thread, query, slug)
-	return thread, err
+	err := p.conn.QueryRow(query, slug).Scan(&threadObj.Author, &created, &threadObj.Forum,
+		&threadObj.Id, &threadObj.Message, &threadObj.Slug, &threadObj.Title, &threadObj.Votes)
+
+	threadObj.Created = strfmt.DateTime(created.UTC()).String()
+	return threadObj, err
 }
 
 func (p *postgresForumRepository) GetThreadByID(id int) (models.Thread, error) {
 	query := `SELECT * FROM thread WHERE id=$1`
 
-	var thread models.Thread
+	var threadObj models.Thread
+	var created time.Time
 
-	err := p.conn.Get(&thread, query, id)
-	return thread, err
+	err := p.conn.QueryRow(query, id).Scan(&threadObj.Author, &created, &threadObj.Forum,
+		&threadObj.Id, &threadObj.Message, &threadObj.Slug, &threadObj.Title, &threadObj.Votes)
+	threadObj.Created = strfmt.DateTime(created.UTC()).String()
+
+	return threadObj, err
 }
 
 func (p *postgresForumRepository) GetThreadIDBySlug(slug string) (int, error) {
 	query := `SELECT id FROM thread WHERE LOWER(slug)=LOWER($1)`
 
 	var id int
-	err := p.conn.Get(&id, query, slug)
+	err := p.conn.QueryRow(query, slug).Scan(&id)
 	return id, err
 }
 
@@ -139,7 +184,7 @@ func (p *postgresForumRepository) GetThreadSlugByID(id int) (string, error) {
 	query := `SELECT slug FROM thread WHERE id=$1`
 
 	var slug string
-	err := p.conn.Get(&slug, query, id)
+	err := p.conn.QueryRow(query, id).Scan(&slug)
 	return slug, err
 }
 
@@ -147,7 +192,7 @@ func (p *postgresForumRepository) getForumSlug(threadID int) (string, error) {
 	query := `SELECT forum FROM thread WHERE id=$1`
 
 	var slug string
-	err := p.conn.Get(&slug, query, threadID)
+	err := p.conn.QueryRow(query, threadID).Scan(&slug)
 	return slug, err
 }
 
@@ -183,7 +228,33 @@ func (p *postgresForumRepository) AddPosts(posts []models.Post, threadID int) ([
 
 	query += strings.Join(valuesNames[:], ",")
 	query += " RETURNING *"
-	err = p.conn.Select(&data, query, values...)
+	row, err := p.conn.Query(query, values...)
+
+	if err != nil {
+		return data, err
+	}
+	defer func() {
+		if row != nil {
+			row.Close()
+		}
+	}()
+
+	for row.Next() {
+
+		var post models.Post
+		var created time.Time
+
+		err = row.Scan(&post.Author, &created, &post.Forum, &post.Id, &post.IsEdited,
+			&post.Message, &post.Parent, &post.Thread, &post.Path)
+
+		if err != nil {
+			return data, err
+		}
+		post.Created = strfmt.DateTime(created.UTC()).String()
+		data = append(data, post)
+
+	}
+
 	return data, err
 }
 
@@ -192,7 +263,7 @@ func (p *postgresForumRepository) AddVote(vote models.Vote) error {
 				nickname,  
 				voice,     
 				idThread)
-				VALUES ($1, $2, NULLIF($3, 0)) RETURNING *`
+				VALUES ($1, $2, NULLIF($3, 0))`
 
 	_, err := p.conn.Exec(query, vote.Nickname, vote.Voice, vote.IdThread)
 	return err
@@ -223,7 +294,31 @@ func (p *postgresForumRepository) getPostsFlat(threadID, limit, since int,
 	query += `LIMIT NULLIF($2, 0)`
 	var posts []models.Post
 
-	err := p.conn.Select(&posts, query, threadID, limit)
+	row, err := p.conn.Query(query, threadID, limit)
+
+	if err != nil {
+		return posts, err
+	}
+	defer func() {
+		if row != nil {
+			row.Close()
+		}
+	}()
+
+	for row.Next() {
+		var post models.Post
+		var created time.Time
+
+		err = row.Scan(&post.Author, &created, &post.Forum, &post.Id, &post.IsEdited, &post.Message,
+			&post.Parent, &post.Thread, &post.Path)
+
+		if err != nil {
+			return posts, err
+		}
+		post.Created = strfmt.DateTime(created.UTC()).String()
+		posts = append(posts, post)
+
+	}
 	return posts, err
 }
 
@@ -247,7 +342,31 @@ func (p *postgresForumRepository) getPostsTree(threadID, limit, since int,
 			`SELECT * FROM post WHERE thread=$1 %s ORDER BY path, id LIMIT NULLIF($2, 0);`, sinceQuery)
 	}
 	var posts []models.Post
-	err := p.conn.Select(&posts, query, threadID, limit)
+	row, err := p.conn.Query(query, threadID, limit)
+
+	if err != nil {
+		return posts, err
+	}
+	defer func() {
+		if row != nil {
+			row.Close()
+		}
+	}()
+
+	for row.Next() {
+		var post models.Post
+		var created time.Time
+
+		err = row.Scan(&post.Author, &created, &post.Forum, &post.Id, &post.IsEdited, &post.Message,
+			&post.Parent, &post.Thread, &post.Path)
+
+		if err != nil {
+			return posts, err
+		}
+		post.Created = strfmt.DateTime(created.UTC()).String()
+		posts = append(posts, post)
+
+	}
 	return posts, err
 }
 
@@ -283,7 +402,32 @@ func (p *postgresForumRepository) getPostsParentTree(threadID, limit, since int,
 			`SELECT * FROM post WHERE path[1] IN (%s) ORDER BY path,id;`, parentsQuery)
 	}
 	var posts []models.Post
-	err := p.conn.Select(&posts, query, threadID)
+	row, err := p.conn.Query(query, threadID)
+
+	if err != nil {
+		return posts, err
+	}
+
+	defer func() {
+		if row != nil {
+			row.Close()
+		}
+	}()
+
+	for row.Next() {
+		var post models.Post
+		var created time.Time
+
+		err = row.Scan(&post.Author, &created, &post.Forum, &post.Id, &post.IsEdited, &post.Message,
+			&post.Parent, &post.Thread, &post.Path)
+
+		if err != nil {
+			return posts, err
+		}
+		post.Created = strfmt.DateTime(created.UTC()).String()
+		posts = append(posts, post)
+
+	}
 	return posts, err
 }
 
@@ -315,7 +459,11 @@ func (p *postgresForumRepository) GetPosts(postSlugOrId models.Thread, limit, si
 func (p *postgresForumRepository) GetPost(id int, related []string) (map[string]interface{}, error) {
 	query := `SELECT * FROM post WHERE id = $1;`
 	var post models.Post
-	err := p.conn.Get(&post, query, id)
+	var created time.Time
+
+	err := p.conn.QueryRow(query, id).Scan(&post.Author, &created, &post.Forum,
+		&post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread, &post.Path)
+	post.Created = strfmt.DateTime(created.UTC()).String()
 
 	returnMap := map[string]interface{}{
 		"post": post,
@@ -361,11 +509,22 @@ func (p *postgresForumRepository) UpdatePost(newPost models.Post) (models.Post, 
 	if newPost.Message == "" {
 		query := `SELECT * FROM post WHERE id = $1`
 		var post models.Post
-		err := p.conn.Get(&post, query, newPost.Id)
+		var created time.Time
+
+		err := p.conn.QueryRow(query, newPost.Id).Scan(&post.Author, &created,
+			&post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread, &post.Path)
+
+		post.Created = strfmt.DateTime(created.UTC()).String()
 		return post, err
 	}
+
 	var post models.Post
-	err = p.conn.Get(&post, query, newPost.Message, newPost.Id)
+	var created time.Time
+
+	err = p.conn.QueryRow(query, newPost.Message, newPost.Id).Scan(&post.Author, &created,
+		&post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread, &post.Path)
+	post.Created = strfmt.DateTime(created.UTC()).String()
+
 	return post, err
 }
 
@@ -374,14 +533,22 @@ func (p *postgresForumRepository) UpdateThread(newThread models.Thread) (models.
 
 	if newThread.Id > 0 {
 		query += `id = $3 RETURNING *`
-		var thread models.Thread
-		err := p.conn.Get(&thread, query, newThread.Message, newThread.Title, newThread.Id)
-		return thread, err
+		var threadObj models.Thread
+		var created time.Time
+		err := p.conn.QueryRow(query, newThread.Message, newThread.Title, newThread.Id).Scan(
+			&threadObj.Author, &created, &threadObj.Forum, &threadObj.Id, &threadObj.Message, &threadObj.Slug,
+			&threadObj.Title, &threadObj.Votes)
+		threadObj.Created = strfmt.DateTime(created.UTC()).String()
+		return threadObj, err
 	} else {
 		query += `LOWER(slug) = LOWER($3) RETURNING *`
-		var thread models.Thread
-		err := p.conn.Get(&thread, query, newThread.Message, newThread.Title, newThread.Slug)
-		return thread, err
+		var threadObj models.Thread
+		var created time.Time
+		err := p.conn.QueryRow(query, newThread.Message, newThread.Title, newThread.Slug).Scan(
+			&threadObj.Author, &created, &threadObj.Forum, &threadObj.Id, &threadObj.Message, &threadObj.Slug,
+			&threadObj.Title, &threadObj.Votes)
+		threadObj.Created = strfmt.DateTime(created.UTC()).String()
+		return threadObj, err
 	}
 }
 
